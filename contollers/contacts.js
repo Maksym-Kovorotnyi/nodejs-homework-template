@@ -3,7 +3,8 @@ const HttpError = require("../helpers/HttpError");
 const ctrlWrapper = require("../helpers/ctrlWrapper");
 
 const getAllContacts = async (req, res) => {
-  const result = await Contact.find();
+  const { _id: owner } = req.user;
+  const result = await Contact.find({ owner });
   if (!result) {
     throw HttpError(404, "Not found");
   }
@@ -20,8 +21,8 @@ const getOneContact = async (req, res) => {
 };
 
 const addNewContact = async (req, res) => {
-  const { name, email, phone } = req.body;
-  const result = await Contact.create({ name, email, phone });
+  const { _id: owner } = req.user;
+  const result = await Contact.create({ ...req.body, owner });
   res.status(201).json(result);
 };
 
