@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   contactsValidateBody,
   authorizationCheck,
+  upload,
 } = require("../../middlewares");
 const ctrl = require("../../contollers/auth");
 
@@ -18,5 +19,12 @@ router.post("/login", contactsValidateBody(schemas.logInSchema), ctrl.login);
 router.get("/current", authorizationCheck, ctrl.currentUser);
 
 router.delete("/logout", authorizationCheck, ctrl.logout);
+
+router.patch(
+  "/avatar",
+  authorizationCheck,
+  upload.single("avatar"),
+  ctrl.updateAvatar
+);
 
 module.exports = router;
