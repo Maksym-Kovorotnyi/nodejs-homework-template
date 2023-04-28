@@ -3,18 +3,28 @@ const HttpError = require("../helpers/HttpError");
 const ctrlWrapper = require("../helpers/ctrlWrapper");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const gravatar = require("gravatar");
+const path = require("path");
+const fsp = require("fs/promises");
+const Jimp = require("jimp");
 require("dotenv").config();
 
 const { SECRET_KEY } = process.env;
+const avatarsDir = path.join(__dirname, "../", "public", "avatars");
 
 const registration = async (req, res) => {
   const { email, password } = req.body;
+  const avatarURL = gravatar.url(email);
   const user = await User.findOne({ email });
   if (user) {
     throw HttpError(409, "Email in use");
   }
   const hashPassword = await bcrypt.hash(password, 10);
-  const newUser = await User.create({ ...req.body, password: hashPassword });
+  const newUser = await User.create({
+    ...req.body,
+    password: hashPassword,
+    avatarURL,
+  });
   res.status(201).json({
     email: newUser.email,
     subscription: newUser.subscription,
@@ -55,9 +65,27 @@ const logout = async (req, res) => {
   });
 };
 
+const updateAvatar = async (req, res) => {
+  const { _id } = req.user;
+  const { path: tmpUpload, originalname } = req.file;
+  const filename = `${_id}_${originalname}`;
+  const resultPath = path.join(avatarsDir, filename);
+  await fsp.rename(tmpUpload, resultPath);
+  const avatarURL = path.join("avatars", filename);
+  Jimp.read(resultPath, (err, filename) => {
+    if (err) throw err;
+    filename.resize(250, 250).write(resultPath);
+  });
+  await User.findByIdAndUpdate(_id, { resultPath });
+  res.json({
+    avatarURL,
+  });
+};
+
 module.exports = {
   registration: ctrlWrapper(registration),
   login: ctrlWrapper(login),
   currentUser: ctrlWrapper(currentUser),
   logout: ctrlWrapper(logout),
+  updateAvatar: ctrlWrapper(updateAvatar),
 };
